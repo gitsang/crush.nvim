@@ -1,0 +1,15 @@
+# Dependencies
+.deps/
+
+# Build artifacts
+build/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Crush
+.crush/
