@@ -7,19 +7,24 @@ local M = {}
 ---Setup function for crush.nvim
 ---@param opts? CrushOptions
 function M.setup(opts)
-  opts = opts or {}
-  local width = opts.width or 80
-  local crush_cmd = opts.crush_cmd or "crush"
+	opts = opts or {}
+	local width = opts.width or 80
+	local crush_cmd = opts.crush_cmd or "crush"
 
-  vim.api.nvim_create_user_command("Crush", function()
-    -- Create a vertical split with specified width
-    vim.cmd("vsplit")
-    local win = vim.api.nvim_get_current_win()
-    vim.api.nvim_win_set_width(win, width)
+	vim.api.nvim_create_user_command("Crush", function()
+		-- Create a vertical split with specified width
+		vim.cmd("vsplit")
+		local win = vim.api.nvim_get_current_win()
+		vim.api.nvim_win_set_width(win, width)
 
-    -- Open terminal and run crush command
-    vim.cmd("terminal " .. crush_cmd)
-  end, {})
+		-- Open terminal and run crush command
+		vim.cmd("terminal " .. crush_cmd)
+
+		-- Set buffer options to hide from buffer tab
+		local buf = vim.api.nvim_get_current_buf()
+		vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+	end, {})
 end
 
 return M
+

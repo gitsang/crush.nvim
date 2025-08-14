@@ -15,6 +15,9 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     crush_cmd = "crush"  -- Command to run in the terminal
   },
   cmd = { "Crush" },
+  keys = {
+    { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush" },
+  },
 }
 ```
 
@@ -40,4 +43,3 @@ require('crush').setup({
 ```
 
 Then run `:Crush` to open the terminal.
-
