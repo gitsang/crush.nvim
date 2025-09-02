@@ -37,7 +37,7 @@ function M.setup(opts)
 
 			-- If WinResized event, only check the resized windows
 			if vim.v.event and vim.v.event.windows then
-				wins = vim.v.event.windows
+				wins = vim.v.event.windows or {}
 			end
 
 			for _, winid in ipairs(wins) do
@@ -45,7 +45,7 @@ function M.setup(opts)
 					local buf = vim.api.nvim_win_get_buf(winid)
 					if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
 						-- Check if this is a crush terminal (not listed in buffer list)
-						if not vim.api.nvim_buf_get_option(buf, "buflisted") then
+						if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
 							vim.api.nvim_win_set_width(winid, width)
 						end
 					end
