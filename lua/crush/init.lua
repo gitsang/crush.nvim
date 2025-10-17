@@ -27,6 +27,26 @@ function M.setup(opts)
 		-- Set buffer options to hide from buffer tab
 		local buf = vim.api.nvim_get_current_buf()
 		vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+
+		-- Set up terminal key mappings for window navigation
+		local term_opts = { buffer = buf, silent = true }
+		vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", term_opts)
+		vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", term_opts)
+		vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", term_opts)
+		vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
+
+		-- Set up autocmd to enter terminal mode when entering crush terminal window
+		vim.api.nvim_create_autocmd("WinEnter", {
+			buffer = buf,
+			callback = function()
+				if vim.api.nvim_get_current_win() == win then
+					vim.cmd("startinsert")
+				end
+			end,
+		})
+
+		-- Enter terminal mode immediately
+		vim.cmd("startinsert")
 	end, {})
 
 	-- Add autocommand to maintain width on window resize
