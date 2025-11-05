@@ -1,7 +1,9 @@
 # crush.nvim
 
-A Neovim plugin that opens a terminal with the crush command in a vertical
-split.
+A Neovim plugin that opens a terminal with the [Crush CLI](https://github.com/charmbracelet/crush)
+in a vertical split.
+
+![Preview](./resources/Preview.gif)
 
 ## 1. Installation
 
@@ -38,7 +40,7 @@ Example configuration:
 ```lua
 require('crush').setup({
   width = 100,
-  crush_cmd = "crush --help"
+  crush_cmd = "crush --yolo"
 })
 ```
 
