@@ -27,36 +27,65 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 {
   'gitsang/crush.nvim',
   opts = {
-    width = 80,         -- Width of the vertical split
-    fixed_width = true, -- Whether to fix the width (true = locked, false = adjustable)
-    crush_cmd = "crush" -- Command to run in the terminal
+    width = 80,                -- Width of the vertical split
+    fixed_width = true,        -- Whether to fix the width (true = locked, false = adjustable)
+    crush_cmd = "crush",       -- Command to run in the terminal
+    copy_to_clipboard = false, -- Copy to system clipboard (default: true, set to false if OSC 52 timeout occurs)
   },
-  cmd = { "Crush" },
+  cmd = { "Crush", "CrushFilePos" },
   keys = {
-    { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush" },
+    { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush", mode = { "n" } },
+    { "<leader>C", ":'<,'>CrushFilePos<cr>", desc = "Copy file path and line info", mode = { "v" } },
   },
 }
 ```
 
 ## 2. Usage
 
-After installation, you can run the `:Crush` command to open a terminal in a
-vertical split running the crush command.
+After installation, you can run the following commands:
 
-### 2.1 Configuration
+### 2.1 Crush Command
+
+Run the `:Crush` command to open a terminal in a vertical split running the crush command.
+
+### 2.2 CrushFilePos Command
+
+The `:CrushFilePos` command copies the relative file path and line/column information to the clipboard in various visual modes:
+
+- **VISUAL LINE mode (`V`)**:
+  - Single line: `README.md:L30`
+  - Multiple lines: `README.md:L30-L40`
+
+- **VISUAL mode (`v`)**:
+  - Single line: `README.md:L30:C14-C18`
+  - Multiple lines: `README.md:L30-L40:C14-C18`
+
+- **BLOCK mode (`Ctrl+v`)**:
+  - Single character: `README.md:L30C14`
+  - Multiple characters: `README.md:L30C14-L40C18`
+
+- **Normal mode**:
+  - Current line: `README.md:L30`
+
+The copied path and line information can be directly pasted into comments, documentation, or shared with others.
+
+### 2.3 Configuration
 
 The plugin can be configured with the following options:
 
 - `width`: Integer for the vertical split width (default: 80)
 - `crush_cmd`: String for the command to run (default: "crush")
+- `fixed_width`: Boolean to lock the terminal width (default: false)
+- `copy_to_clipboard`: Boolean to copy to system clipboard (default: true, set to false if you see "OSC 52 response" timeout errors)
 
 Example configuration:
 
 ```lua
 require('crush').setup({
   width = 100,
-  crush_cmd = "crush --yolo"
+  crush_cmd = "crush --yolo",
+  copy_to_clipboard = false  -- Disable if clipboard doesn't work
 })
 ```
 
-Then run `:Crush` to open the terminal.
+Then run `:Crush` to open the terminal, or use `:CrushFilePos` to copy file paths with line information.
