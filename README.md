@@ -28,6 +28,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   'gitsang/crush.nvim',
   opts = {
     width = 80,         -- Width of the vertical split
+    fixed_width = true, -- Whether to fix the width (true = locked, false = adjustable)
     crush_cmd = "crush" -- Command to run in the terminal
   },
   cmd = { "Crush" },
