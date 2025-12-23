@@ -13,6 +13,66 @@ function M.setup(opts)
 	local crush_cmd = opts.crush_cmd or "crush"
 	local fixed_width = opts.fixed_width or false
 
+	-- Create CrushFile command
+	vim.api.nvim_create_user_command("CrushFile", function(opts)
+		local buf = vim.api.nvim_get_current_buf()
+		local file_path = vim.api.nvim_buf_get_name(buf)
+
+		-- Get relative path from current working directory
+		local relative_path = vim.fn.fnamemodify(file_path, ":.")
+
+		local result = ""
+
+		-- Check if we have a range (from visual selection)
+		if opts.range == 2 then
+			-- We have a range, get the visual mode that created it
+			local visual_mode = vim.fn.visualmode()
+			local start_line = opts.line1
+			local end_line = opts.line2
+			local start_col = vim.fn.col("'<")
+			local end_col = vim.fn.col("'>")
+
+			if visual_mode == "V" then
+				-- VISUAL LINE mode
+				if start_line == end_line then
+					result = string.format("%s:L%d", relative_path, start_line)
+				else
+					result = string.format("%s:L%d-L%d", relative_path, start_line, end_line)
+				end
+			elseif visual_mode == "v" then
+				-- VISUAL mode (character-wise)
+				if start_line == end_line then
+					-- Single line in VISUAL mode
+					result = string.format("%s:L%d:C%d-C%d", relative_path, start_line, start_col, end_col)
+				else
+					-- Multiple lines in VISUAL mode
+					result =
+						string.format("%s:L%d-L%d:C%d-C%d", relative_path, start_line, end_line, start_col, end_col)
+				end
+			elseif visual_mode == "\22" then
+				-- BLOCK mode
+				if start_line == end_line and start_col == end_col then
+					-- Single character in BLOCK mode
+					result = string.format("%s:L%dC%d", relative_path, start_line, start_col)
+				else
+					-- Multiple characters in BLOCK mode
+					result = string.format("%s:L%dC%d-L%dC%d", relative_path, start_line, start_col, end_line, end_col)
+				end
+			end
+		else
+			-- Not in visual mode, just copy current file and line
+			local current_line = vim.fn.line(".")
+			result = string.format("%s:L%d", relative_path, current_line)
+		end
+
+		-- Copy to system clipboard
+		vim.fn.setreg("+", result)
+		vim.fn.setreg('"', result)
+
+		-- Show notification
+		vim.notify("Copied: " .. result, vim.log.levels.INFO)
+	end, { range = true })
+
 	-- Create Crush command
 	vim.api.nvim_create_user_command("Crush", function()
 		-- Create a vertical split
