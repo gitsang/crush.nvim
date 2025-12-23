@@ -1,14 +1,16 @@
 local M = {}
 
+---Get current file path (relative)
+---@return string file_path
+local function get_current_file()
+	local buf = vim.api.nvim_get_current_buf()
+	local file_path = vim.api.nvim_buf_get_name(buf)
+	return vim.fn.fnamemodify(file_path, ":.")
+end
+
 ---Get visual position string from current buffer and selection
 ---@return string position_string
 local function get_visual_pos()
-	local buf = vim.api.nvim_get_current_buf()
-	local file_path = vim.api.nvim_buf_get_name(buf)
-
-	-- Get relative path from current working directory
-	local relative_path = vim.fn.fnamemodify(file_path, ":.")
-
 	local result = ""
 
 	-- Check if we have a range (from visual selection)
@@ -21,32 +23,32 @@ local function get_visual_pos()
 	if visual_mode == "V" then
 		-- VISUAL LINE mode
 		if start_line == end_line then
-			result = string.format("@%s:L%d", relative_path, start_line)
+			result = string.format("L%d", start_line)
 		else
-			result = string.format("@%s:L%d-L%d", relative_path, start_line, end_line)
+			result = string.format("L%d-L%d", start_line, end_line)
 		end
 	elseif visual_mode == "v" then
 		-- VISUAL mode (character-wise)
 		if start_line == end_line then
 			-- Single line in VISUAL mode
-			result = string.format("@%s:L%d:C%d-C%d", relative_path, start_line, start_col, end_col)
+			result = string.format("L%d:C%d-C%d", start_line, start_col, end_col)
 		else
 			-- Multiple lines in VISUAL mode
-			result = string.format("@%s:L%d-L%d:C%d-C%d", relative_path, start_line, end_line, start_col, end_col)
+			result = string.format("L%d-L%d:C%d-C%d", start_line, end_line, start_col, end_col)
 		end
 	elseif visual_mode == "\22" then
 		-- BLOCK mode
 		if start_line == end_line and start_col == end_col then
 			-- Single character in BLOCK mode
-			result = string.format("@%s:L%dC%d", relative_path, start_line, start_col)
+			result = string.format("L%dC%d", start_line, start_col)
 		else
 			-- Multiple characters in BLOCK mode
-			result = string.format("@%s:L%dC%d-L%dC%d", relative_path, start_line, start_col, end_line, end_col)
+			result = string.format("L%dC%d-L%dC%d", start_line, start_col, end_line, end_col)
 		end
 	else
-		-- Not in visual mode, just copy current file and line
+		-- Not in visual mode, just copy current line
 		local current_line = vim.fn.line(".")
-		result = string.format("@%s:L%d", relative_path, current_line)
+		result = string.format("L%d", current_line)
 	end
 
 	return result
@@ -95,15 +97,9 @@ end
 ---Copy visual position to system clipboard and send to crush terminal
 ---@param opts? table command options with range information
 local function copy_visual_pos(opts)
-	local result = ""
-
-	-- Check if we have a range (from visual selection)
-	if opts and opts.range == 2 then
-		result = get_visual_pos()
-	else
-		-- Not in visual mode, just copy current file and line
-		result = get_visual_pos()
-	end
+	local current_file = get_current_file()
+	local visual_pos = get_visual_pos()
+	local result = current_file .. ":" .. visual_pos
 
 	-- Copy to system clipboard
 	vim.fn.setreg("+", result)
@@ -112,8 +108,8 @@ local function copy_visual_pos(opts)
 	-- Show notification
 	vim.notify("Copied: " .. result, vim.log.levels.INFO)
 
-	-- Try to send to terminal, return result for terminal opening if needed
-	return result
+	-- Return data for terminal sending
+	return current_file, visual_pos
 end
 
 ---Open crush terminal in vertical split
@@ -174,19 +170,21 @@ function M.setup(opts)
 
 	-- Create CrushFile command
 	vim.api.nvim_create_user_command("CrushFilePos", function(cmd_opts)
-		local result = copy_visual_pos(cmd_opts)
+		local current_file, visual_pos = copy_visual_pos(cmd_opts)
 
 		-- Check if crush terminal exists
 		if find_crush_terminal() then
-			-- Send to existing terminal
-			send_to_terminal(result)
+			-- Send to existing terminal: @file, enter, :pos
+			send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
+			send_to_terminal(":" .. visual_pos .. " ")
 		else
 			-- Open crush terminal first, then send
 			open_crush_terminal(width, crush_cmd, fixed_width)
 			-- Wait a bit for terminal to be ready, then send
 			vim.defer_fn(function()
-				send_to_terminal(result)
-			end, 100)
+				send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
+				send_to_terminal(":" .. visual_pos .. " ")
+			end, 3000)
 		end
 	end, { range = true })
 
