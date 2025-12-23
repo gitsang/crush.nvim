@@ -31,7 +31,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
     fixed_width = true, -- Whether to fix the width (true = locked, false = adjustable)
     crush_cmd = "crush" -- Command to run in the terminal
   },
-  cmd = { "Crush", "CrushFile" },
+  cmd = { "Crush", "CrushFilePos" },
   keys = {
     { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush", mode = { "n" } },
     { "<leader>C", ":'<,'>CrushFilePos<cr>", desc = "Copy file path and line info", mode = { "v" } },
@@ -47,9 +47,9 @@ After installation, you can run the following commands:
 
 Run the `:Crush` command to open a terminal in a vertical split running the crush command.
 
-### 2.2 CrushFile Command
+### 2.2 CrushFilePos Command
 
-The `:CrushFile` command copies the relative file path and line/column information to the clipboard in various visual modes:
+The `:CrushFilePos` command copies the relative file path and line/column information to the clipboard in various visual modes:
 
 - **VISUAL LINE mode (`V`)**:
   - Single line: `README.md:L30`
@@ -84,4 +84,4 @@ require('crush').setup({
 })
 ```
 
-Then run `:Crush` to open the terminal, or use `:CrushFile` to copy file paths with line information.
+Then run `:Crush` to open the terminal, or use `:CrushFilePos` to copy file paths with line information.

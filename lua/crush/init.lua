@@ -101,12 +101,29 @@ local function copy_visual_pos(opts)
 	local visual_pos = get_visual_pos()
 	local result = current_file .. ":" .. visual_pos
 
-	-- Copy to system clipboard
-	vim.fn.setreg("+", result)
-	vim.fn.setreg('"', result)
+	-- Copy to system clipboard using multiple methods
+	-- Method 1: Direct register assignment
+	local success = pcall(function()
+		vim.fn.setreg("+", result)
+		vim.fn.setreg('"', result)
+	end)
 
-	-- Show notification
-	vim.notify("Copied: " .. result, vim.log.levels.INFO)
+	-- Method 2: Use vim.cmd as fallback
+	if not success then
+		pcall(function()
+			vim.cmd('let @+ = "' .. result .. '"')
+			vim.cmd('let @" = "' .. result .. '"')
+		end)
+	end
+
+	-- Verify clipboard content
+	local clipboard_content = vim.fn.getreg("+")
+	if clipboard_content ~= result then
+		vim.notify("Failed to copy to clipboard", vim.log.levels.ERROR)
+	else
+		-- Show notification
+		vim.notify("Copied: " .. result, vim.log.levels.INFO)
+	end
 
 	-- Return data for terminal sending
 	return current_file, visual_pos
