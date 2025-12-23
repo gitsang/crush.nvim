@@ -95,9 +95,8 @@ local function send_to_terminal(text)
 end
 
 ---Copy visual position to system clipboard and send to crush terminal
----@param opts? table command options with range information
 ---@param copy_to_clipboard? boolean whether to copy to system clipboard
-local function copy_visual_pos(opts, copy_to_clipboard)
+local function copy_visual_pos(copy_to_clipboard)
 	local current_file = get_current_file()
 	local visual_pos = get_visual_pos()
 	local result = current_file .. ":" .. visual_pos
@@ -178,11 +177,97 @@ local function open_crush_terminal(width, crush_cmd, fixed_width)
 	vim.cmd("startinsert")
 end
 
+---@class CrushAction
+---@field name string
+---@field description? string
+---@field prompts string|fun():string
+
 ---@class CrushOptions
 ---@field width? integer
 ---@field crush_cmd? string
 ---@field fixed_width? boolean
 ---@field copy_to_clipboard? boolean
+---@field actions? CrushAction[]
+
+---Handle CrushFilePos command
+---@param copy_to_clipboard boolean whether to copy to clipboard
+---@param width integer terminal width
+---@param crush_cmd string command to run
+---@param fixed_width boolean whether to fix window width
+local function handle_crush_filepos(copy_to_clipboard, width, crush_cmd, fixed_width)
+	local current_file, visual_pos = copy_visual_pos(copy_to_clipboard)
+
+	-- Check if crush terminal exists
+	if find_crush_terminal() then
+		-- Send to existing terminal: @file, enter, :pos
+		send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
+		send_to_terminal(":" .. visual_pos .. " ")
+	else
+		-- Open crush terminal first, then send
+		open_crush_terminal(width, crush_cmd, fixed_width)
+		-- Wait a bit for terminal to be ready, then send
+		vim.defer_fn(function()
+			send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
+			send_to_terminal(":" .. visual_pos .. " ")
+		end, 3000)
+	end
+end
+
+---Handle CrushActions command
+---@param opts CrushOptions configuration options
+---@param width integer terminal width
+---@param crush_cmd string command to run
+---@param fixed_width boolean whether to fix window width
+local function handle_crush_actions(opts, width, crush_cmd, fixed_width)
+	if not opts.actions or #opts.actions == 0 then
+		vim.notify("No actions configured", vim.log.levels.WARN)
+		return
+	end
+
+	-- Prepare items for selection
+	local items = {}
+	for _, action in ipairs(opts.actions) do
+		table.insert(items, {
+			name = action.name,
+			description = action.description or "",
+			action = action,
+		})
+	end
+
+	-- Show popup selector
+	vim.ui.select(items, {
+		prompt = "Select action:",
+		format_item = function(item)
+			if item.description ~= "" then
+				return item.name .. " - " .. item.description
+			else
+				return item.name
+			end
+		end,
+	}, function(selected)
+		if not selected then
+			return
+		end
+
+		-- Get the prompt
+		local prompt = ""
+		if type(selected.action.prompts) == "function" then
+			prompt = selected.action.prompts()
+		else
+			prompt = selected.action.prompts
+		end
+
+		-- Ensure terminal exists
+		if not find_crush_terminal() then
+			open_crush_terminal(width, crush_cmd, fixed_width)
+			vim.defer_fn(function()
+				send_to_terminal(prompt)
+			end, 3000)
+		else
+			send_to_terminal(prompt)
+		end
+	end)
+end
 
 ---Setup function for crush.nvim
 ---@param opts? CrushOptions
@@ -193,30 +278,27 @@ function M.setup(opts)
 	local fixed_width = opts.fixed_width or false
 	local copy_to_clipboard = opts.copy_to_clipboard ~= false -- default to true
 
-	-- Create CrushFile command
-	vim.api.nvim_create_user_command("CrushFilePos", function(cmd_opts)
-		local current_file, visual_pos = copy_visual_pos(cmd_opts, copy_to_clipboard)
+	-- Initialize actions array if not provided
+	if not opts.actions then
+		opts.actions = {}
+	end
 
-		-- Check if crush terminal exists
-		if find_crush_terminal() then
-			-- Send to existing terminal: @file, enter, :pos
-			send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
-			send_to_terminal(":" .. visual_pos .. " ")
-		else
-			-- Open crush terminal first, then send
-			open_crush_terminal(width, crush_cmd, fixed_width)
-			-- Wait a bit for terminal to be ready, then send
-			vim.defer_fn(function()
-				send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
-				send_to_terminal(":" .. visual_pos .. " ")
-			end, 3000)
-		end
-	end, { range = true })
+	-- Load default actions and insert them at the beginning
+	local default_actions = require("crush.actions.default").get_default_actions()
+	for i = #default_actions, 1, -1 do
+		table.insert(opts.actions, 1, default_actions[i])
+	end
 
 	-- Create Crush command
 	vim.api.nvim_create_user_command("Crush", function()
 		open_crush_terminal(width, crush_cmd, fixed_width)
 	end, {})
+	vim.api.nvim_create_user_command("CrushActions", function()
+		handle_crush_actions(opts, width, crush_cmd, fixed_width)
+	end, { range = true })
+	vim.api.nvim_create_user_command("CrushFilePos", function()
+		handle_crush_filepos(copy_to_clipboard, width, crush_cmd, fixed_width)
+	end, { range = true })
 
 	-- Add autocommand to maintain width on window resize (only if fixed_width is enabled)
 	if fixed_width then
