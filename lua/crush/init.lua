@@ -96,33 +96,39 @@ end
 
 ---Copy visual position to system clipboard and send to crush terminal
 ---@param opts? table command options with range information
-local function copy_visual_pos(opts)
+---@param copy_to_clipboard? boolean whether to copy to system clipboard
+local function copy_visual_pos(opts, copy_to_clipboard)
 	local current_file = get_current_file()
 	local visual_pos = get_visual_pos()
 	local result = current_file .. ":" .. visual_pos
 
-	-- Copy to system clipboard using multiple methods
-	-- Method 1: Direct register assignment
-	local success = pcall(function()
-		vim.fn.setreg("+", result)
-		vim.fn.setreg('"', result)
-	end)
+	-- Always copy to unnamed register (works without system clipboard)
+	vim.fn.setreg('"', result)
+	vim.fn.setreg("0", result)
 
-	-- Method 2: Use vim.cmd as fallback
-	if not success then
-		pcall(function()
-			vim.cmd('let @+ = "' .. result .. '"')
-			vim.cmd('let @" = "' .. result .. '"')
+	-- Copy to system clipboard only if enabled
+	local clipboard_success = false
+	if copy_to_clipboard then
+		local success = pcall(function()
+			vim.fn.setreg("+", result)
 		end)
+
+		if success then
+			-- Verify of content was actually copied
+			local clipboard_content = vim.fn.getreg("+")
+			if clipboard_content == result then
+				clipboard_success = true
+			end
+		end
 	end
 
-	-- Verify clipboard content
-	local clipboard_content = vim.fn.getreg("+")
-	if clipboard_content ~= result then
-		vim.notify("Failed to copy to clipboard", vim.log.levels.ERROR)
+	-- Show appropriate notification
+	if copy_to_clipboard and clipboard_success then
+		vim.notify("Copied to clipboard: " .. result, vim.log.levels.INFO)
+	elseif copy_to_clipboard then
+		vim.notify("Copied to register (clipboard unavailable): " .. result, vim.log.levels.WARN)
 	else
-		-- Show notification
-		vim.notify("Copied: " .. result, vim.log.levels.INFO)
+		vim.notify("Copied to register: " .. result .. " (paste with p)", vim.log.levels.INFO)
 	end
 
 	-- Return data for terminal sending
@@ -176,6 +182,7 @@ end
 ---@field width? integer
 ---@field crush_cmd? string
 ---@field fixed_width? boolean
+---@field copy_to_clipboard? boolean
 
 ---Setup function for crush.nvim
 ---@param opts? CrushOptions
@@ -184,10 +191,11 @@ function M.setup(opts)
 	local width = opts.width or 80
 	local crush_cmd = opts.crush_cmd or "crush"
 	local fixed_width = opts.fixed_width or false
+	local copy_to_clipboard = opts.copy_to_clipboard ~= false -- default to true
 
 	-- Create CrushFile command
 	vim.api.nvim_create_user_command("CrushFilePos", function(cmd_opts)
-		local current_file, visual_pos = copy_visual_pos(cmd_opts)
+		local current_file, visual_pos = copy_visual_pos(cmd_opts, copy_to_clipboard)
 
 		-- Check if crush terminal exists
 		if find_crush_terminal() then

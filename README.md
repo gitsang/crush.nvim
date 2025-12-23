@@ -27,9 +27,10 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
 {
   'gitsang/crush.nvim',
   opts = {
-    width = 80,         -- Width of the vertical split
-    fixed_width = true, -- Whether to fix the width (true = locked, false = adjustable)
-    crush_cmd = "crush" -- Command to run in the terminal
+    width = 80,                -- Width of the vertical split
+    fixed_width = true,        -- Whether to fix the width (true = locked, false = adjustable)
+    crush_cmd = "crush",       -- Command to run in the terminal
+    copy_to_clipboard = false, -- Copy to system clipboard (default: true, set to false if OSC 52 timeout occurs)
   },
   cmd = { "Crush", "CrushFilePos" },
   keys = {
@@ -74,13 +75,16 @@ The plugin can be configured with the following options:
 
 - `width`: Integer for the vertical split width (default: 80)
 - `crush_cmd`: String for the command to run (default: "crush")
+- `fixed_width`: Boolean to lock the terminal width (default: false)
+- `copy_to_clipboard`: Boolean to copy to system clipboard (default: true, set to false if you see "OSC 52 response" timeout errors)
 
 Example configuration:
 
 ```lua
 require('crush').setup({
   width = 100,
-  crush_cmd = "crush --yolo"
+  crush_cmd = "crush --yolo",
+  copy_to_clipboard = false  -- Disable if clipboard doesn't work
 })
 ```
 
