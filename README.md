@@ -34,7 +34,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   cmd = { "Crush", "CrushFile" },
   keys = {
     { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush", mode = { "n" } },
-    { "<leader>F", ":'<,'>CrushFile<cr>", desc = "Copy file path and line info", mode = { "v", "\22" } },
+    { "<leader>C", ":'<,'>CrushFilePos<cr>", desc = "Copy file path and line info", mode = { "v" } },
   },
 }
 ```

@@ -1,5 +1,121 @@
 local M = {}
 
+---Get visual position string from current buffer and selection
+---@return string position_string
+local function get_visual_pos()
+	local buf = vim.api.nvim_get_current_buf()
+	local file_path = vim.api.nvim_buf_get_name(buf)
+
+	-- Get relative path from current working directory
+	local relative_path = vim.fn.fnamemodify(file_path, ":.")
+
+	local result = ""
+
+	-- Check if we have a range (from visual selection)
+	local visual_mode = vim.fn.visualmode()
+	local start_line = vim.fn.line("'<")
+	local end_line = vim.fn.line("'>")
+	local start_col = vim.fn.col("'<")
+	local end_col = vim.fn.col("'>")
+
+	if visual_mode == "V" then
+		-- VISUAL LINE mode
+		if start_line == end_line then
+			result = string.format("%s:L%d", relative_path, start_line)
+		else
+			result = string.format("%s:L%d-L%d", relative_path, start_line, end_line)
+		end
+	elseif visual_mode == "v" then
+		-- VISUAL mode (character-wise)
+		if start_line == end_line then
+			-- Single line in VISUAL mode
+			result = string.format("%s:L%d:C%d-C%d", relative_path, start_line, start_col, end_col)
+		else
+			-- Multiple lines in VISUAL mode
+			result = string.format("%s:L%d-L%d:C%d-C%d", relative_path, start_line, end_line, start_col, end_col)
+		end
+	elseif visual_mode == "\22" then
+		-- BLOCK mode
+		if start_line == end_line and start_col == end_col then
+			-- Single character in BLOCK mode
+			result = string.format("%s:L%dC%d", relative_path, start_line, start_col)
+		else
+			-- Multiple characters in BLOCK mode
+			result = string.format("%s:L%dC%d-L%dC%d", relative_path, start_line, start_col, end_line, end_col)
+		end
+	else
+		-- Not in visual mode, just copy current file and line
+		local current_line = vim.fn.line(".")
+		result = string.format("%s:L%d", relative_path, current_line)
+	end
+
+	return result
+end
+
+---Copy visual position to system clipboard
+---@param opts? table command options with range information
+local function copy_visual_pos(opts)
+	local result = ""
+
+	-- Check if we have a range (from visual selection)
+	if opts and opts.range == 2 then
+		result = get_visual_pos()
+	else
+		-- Not in visual mode, just copy current file and line
+		result = get_visual_pos()
+	end
+
+	-- Copy to system clipboard
+	vim.fn.setreg("+", result)
+	vim.fn.setreg('"', result)
+
+	-- Show notification
+	vim.notify("Copied: " .. result, vim.log.levels.INFO)
+end
+
+---Open crush terminal in vertical split
+---@param width integer terminal width
+---@param crush_cmd string command to run
+---@param fixed_width boolean whether to fix window width
+local function open_crush_terminal(width, crush_cmd, fixed_width)
+	-- Create a vertical split
+	vim.cmd("vsplit")
+	local win = vim.api.nvim_get_current_win()
+
+	-- Set window width and optionally fix it
+	vim.api.nvim_win_set_width(win, width)
+	if fixed_width then
+		vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
+	end
+
+	-- Open terminal and run crush command
+	vim.cmd("terminal " .. crush_cmd)
+
+	-- Set buffer options to hide from buffer tab
+	local buf = vim.api.nvim_get_current_buf()
+	vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+
+	-- Set up terminal key mappings for window navigation
+	local term_opts = { buffer = buf, silent = true }
+	vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", term_opts)
+	vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", term_opts)
+	vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", term_opts)
+	vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
+
+	-- Set up autocmd to enter terminal mode when entering crush terminal window
+	vim.api.nvim_create_autocmd("WinEnter", {
+		buffer = buf,
+		callback = function()
+			if vim.api.nvim_get_current_win() == win then
+				vim.cmd("startinsert")
+			end
+		end,
+	})
+
+	-- Enter terminal mode immediately
+	vim.cmd("startinsert")
+end
+
 ---@class CrushOptions
 ---@field width? integer
 ---@field crush_cmd? string
@@ -14,103 +130,13 @@ function M.setup(opts)
 	local fixed_width = opts.fixed_width or false
 
 	-- Create CrushFile command
-	vim.api.nvim_create_user_command("CrushFile", function(opts)
-		local buf = vim.api.nvim_get_current_buf()
-		local file_path = vim.api.nvim_buf_get_name(buf)
-
-		-- Get relative path from current working directory
-		local relative_path = vim.fn.fnamemodify(file_path, ":.")
-
-		local result = ""
-
-		-- Check if we have a range (from visual selection)
-		if opts.range == 2 then
-			-- We have a range, get the visual mode that created it
-			local visual_mode = vim.fn.visualmode()
-			local start_line = opts.line1
-			local end_line = opts.line2
-			local start_col = vim.fn.col("'<")
-			local end_col = vim.fn.col("'>")
-
-			if visual_mode == "V" then
-				-- VISUAL LINE mode
-				if start_line == end_line then
-					result = string.format("%s:L%d", relative_path, start_line)
-				else
-					result = string.format("%s:L%d-L%d", relative_path, start_line, end_line)
-				end
-			elseif visual_mode == "v" then
-				-- VISUAL mode (character-wise)
-				if start_line == end_line then
-					-- Single line in VISUAL mode
-					result = string.format("%s:L%d:C%d-C%d", relative_path, start_line, start_col, end_col)
-				else
-					-- Multiple lines in VISUAL mode
-					result =
-						string.format("%s:L%d-L%d:C%d-C%d", relative_path, start_line, end_line, start_col, end_col)
-				end
-			elseif visual_mode == "\22" then
-				-- BLOCK mode
-				if start_line == end_line and start_col == end_col then
-					-- Single character in BLOCK mode
-					result = string.format("%s:L%dC%d", relative_path, start_line, start_col)
-				else
-					-- Multiple characters in BLOCK mode
-					result = string.format("%s:L%dC%d-L%dC%d", relative_path, start_line, start_col, end_line, end_col)
-				end
-			end
-		else
-			-- Not in visual mode, just copy current file and line
-			local current_line = vim.fn.line(".")
-			result = string.format("%s:L%d", relative_path, current_line)
-		end
-
-		-- Copy to system clipboard
-		vim.fn.setreg("+", result)
-		vim.fn.setreg('"', result)
-
-		-- Show notification
-		vim.notify("Copied: " .. result, vim.log.levels.INFO)
+	vim.api.nvim_create_user_command("CrushFilePos", function(cmd_opts)
+		copy_visual_pos(cmd_opts)
 	end, { range = true })
 
 	-- Create Crush command
 	vim.api.nvim_create_user_command("Crush", function()
-		-- Create a vertical split
-		vim.cmd("vsplit")
-		local win = vim.api.nvim_get_current_win()
-
-		-- Set window width and optionally fix it
-		vim.api.nvim_win_set_width(win, width)
-		if fixed_width then
-			vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
-		end
-
-		-- Open terminal and run crush command
-		vim.cmd("terminal " .. crush_cmd)
-
-		-- Set buffer options to hide from buffer tab
-		local buf = vim.api.nvim_get_current_buf()
-		vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-
-		-- Set up terminal key mappings for window navigation
-		local term_opts = { buffer = buf, silent = true }
-		vim.keymap.set("t", "<C-h>", "<C-\\><C-n><C-w>h", term_opts)
-		vim.keymap.set("t", "<C-j>", "<C-\\><C-n><C-w>j", term_opts)
-		vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", term_opts)
-		vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
-
-		-- Set up autocmd to enter terminal mode when entering crush terminal window
-		vim.api.nvim_create_autocmd("WinEnter", {
-			buffer = buf,
-			callback = function()
-				if vim.api.nvim_get_current_win() == win then
-					vim.cmd("startinsert")
-				end
-			end,
-		})
-
-		-- Enter terminal mode immediately
-		vim.cmd("startinsert")
+		open_crush_terminal(width, crush_cmd, fixed_width)
 	end, {})
 
 	-- Add autocommand to maintain width on window resize (only if fixed_width is enabled)
