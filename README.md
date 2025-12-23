@@ -33,8 +33,8 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim):
   },
   cmd = { "Crush", "CrushFile" },
   keys = {
-    { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush" },
-    { "<leader>F", "<cmd>CrushFile<cr>", desc = "Copy file path and line info", mode = { "n", "v", "V", "\22" } },
+    { "<leader>C", "<cmd>Crush<cr>", desc = "Toggle Crush", mode = { "n" } },
+    { "<leader>F", ":'<,'>CrushFile<cr>", desc = "Copy file path and line info", mode = { "v", "\22" } },
   },
 }
 ```
@@ -68,7 +68,7 @@ The `:CrushFile` command copies the relative file path and line/column informati
 
 The copied path and line information can be directly pasted into comments, documentation, or shared with others.
 
-### 2.1 Configuration
+### 2.3 Configuration
 
 The plugin can be configured with the following options:
 
