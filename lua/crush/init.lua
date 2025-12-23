@@ -21,38 +21,78 @@ local function get_visual_pos()
 	if visual_mode == "V" then
 		-- VISUAL LINE mode
 		if start_line == end_line then
-			result = string.format("%s:L%d", relative_path, start_line)
+			result = string.format("@%s:L%d", relative_path, start_line)
 		else
-			result = string.format("%s:L%d-L%d", relative_path, start_line, end_line)
+			result = string.format("@%s:L%d-L%d", relative_path, start_line, end_line)
 		end
 	elseif visual_mode == "v" then
 		-- VISUAL mode (character-wise)
 		if start_line == end_line then
 			-- Single line in VISUAL mode
-			result = string.format("%s:L%d:C%d-C%d", relative_path, start_line, start_col, end_col)
+			result = string.format("@%s:L%d:C%d-C%d", relative_path, start_line, start_col, end_col)
 		else
 			-- Multiple lines in VISUAL mode
-			result = string.format("%s:L%d-L%d:C%d-C%d", relative_path, start_line, end_line, start_col, end_col)
+			result = string.format("@%s:L%d-L%d:C%d-C%d", relative_path, start_line, end_line, start_col, end_col)
 		end
 	elseif visual_mode == "\22" then
 		-- BLOCK mode
 		if start_line == end_line and start_col == end_col then
 			-- Single character in BLOCK mode
-			result = string.format("%s:L%dC%d", relative_path, start_line, start_col)
+			result = string.format("@%s:L%dC%d", relative_path, start_line, start_col)
 		else
 			-- Multiple characters in BLOCK mode
-			result = string.format("%s:L%dC%d-L%dC%d", relative_path, start_line, start_col, end_line, end_col)
+			result = string.format("@%s:L%dC%d-L%dC%d", relative_path, start_line, start_col, end_line, end_col)
 		end
 	else
 		-- Not in visual mode, just copy current file and line
 		local current_line = vim.fn.line(".")
-		result = string.format("%s:L%d", relative_path, current_line)
+		result = string.format("@%s:L%d", relative_path, current_line)
 	end
 
 	return result
 end
 
----Copy visual position to system clipboard
+---Find crush terminal buffer
+---@return integer|nil bufnr
+local function find_crush_terminal()
+	local bufs = vim.api.nvim_list_bufs()
+	for _, buf in ipairs(bufs) do
+		if vim.api.nvim_buf_is_valid(buf) then
+			local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
+			local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf })
+			if buftype == "terminal" and not buflisted then
+				return buf
+			end
+		end
+	end
+	return nil
+end
+
+---Send text to crush terminal
+---@param text string text to send
+local function send_to_terminal(text)
+	local buf = find_crush_terminal()
+	if not buf then
+		return false
+	end
+
+	-- Find the window containing this buffer
+	local wins = vim.api.nvim_list_wins()
+	for _, win in ipairs(wins) do
+		if vim.api.nvim_win_is_valid(win) then
+			if vim.api.nvim_win_get_buf(win) == buf then
+				-- Focus the terminal window
+				vim.api.nvim_set_current_win(win)
+				-- Send text to terminal
+				vim.api.nvim_chan_send(vim.bo[buf].channel, text)
+				return true
+			end
+		end
+	end
+	return false
+end
+
+---Copy visual position to system clipboard and send to crush terminal
 ---@param opts? table command options with range information
 local function copy_visual_pos(opts)
 	local result = ""
@@ -71,6 +111,9 @@ local function copy_visual_pos(opts)
 
 	-- Show notification
 	vim.notify("Copied: " .. result, vim.log.levels.INFO)
+
+	-- Try to send to terminal, return result for terminal opening if needed
+	return result
 end
 
 ---Open crush terminal in vertical split
@@ -131,7 +174,20 @@ function M.setup(opts)
 
 	-- Create CrushFile command
 	vim.api.nvim_create_user_command("CrushFilePos", function(cmd_opts)
-		copy_visual_pos(cmd_opts)
+		local result = copy_visual_pos(cmd_opts)
+
+		-- Check if crush terminal exists
+		if find_crush_terminal() then
+			-- Send to existing terminal
+			send_to_terminal(result)
+		else
+			-- Open crush terminal first, then send
+			open_crush_terminal(width, crush_cmd, fixed_width)
+			-- Wait a bit for terminal to be ready, then send
+			vim.defer_fn(function()
+				send_to_terminal(result)
+			end, 100)
+		end
 	end, { range = true })
 
 	-- Create Crush command
