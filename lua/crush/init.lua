@@ -200,15 +200,13 @@ local function handle_crush_filepos(copy_to_clipboard, width, crush_cmd, fixed_w
 	-- Check if crush terminal exists
 	if find_crush_terminal() then
 		-- Send to existing terminal: @file, enter, :pos
-		send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
-		send_to_terminal(":" .. visual_pos .. " ")
+		send_to_terminal(current_file .. ":" .. visual_pos .. " ")
 	else
 		-- Open crush terminal first, then send
 		open_crush_terminal(width, crush_cmd, fixed_width)
 		-- Wait a bit for terminal to be ready, then send
 		vim.defer_fn(function()
-			send_to_terminal("@" .. current_file .. "\r:") -- I don't known why need `:` tailing
-			send_to_terminal(":" .. visual_pos .. " ")
+			send_to_terminal(current_file .. ":" .. visual_pos .. " ")
 		end, 3000)
 	end
 end

@@ -67,9 +67,9 @@ local function get_diagnostics_prompt()
 
 	-- Add file and range info
 	if start_line == end_line then
-		result = result .. string.format("@%s\r::L%d\n\n", current_file, start_line)
+		result = result .. string.format("%s:L%d\n\n", current_file, start_line)
 	else
-		result = result .. string.format("@%s\r::L%d-L%d\n\n", current_file, start_line, end_line)
+		result = result .. string.format("%s:L%d-L%d\n\n", current_file, start_line, end_line)
 	end
 
 	-- Add diagnostics
