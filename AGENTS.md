@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This is a Neovim plugin written in Lua that opens a terminal with the crush command in a vertical split.
+This is a Neovim plugin written in Lua that opens a terminal with AI CLI tools (crush, opencode, claude, gemini-cli, etc.) in a vertical split.
 
 ## Commands
 
@@ -39,7 +39,7 @@ This is a Neovim plugin written in Lua that opens a terminal with the crush comm
 
 ## Plugin Structure
 
-- Plugin code is in lua/crush/init.lua
+- Plugin code is in lua/codock/init.lua
 - Main functionality is in the setup() function
-- Creates a Crush user command
-
+- Creates Codock user commands (Codock, CodockFilePos, CodockActions)
+- Supports multiple AI CLI tools via codock_cmd option

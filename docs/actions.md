@@ -2,9 +2,9 @@
 
 [中文](./actions.zh-CN.md)
 
-This tutorial teaches you how to configure custom actions for `crush.nvim`.
+This tutorial teaches you how to configure custom actions for `codock.nvim`.
 
-## 1. CrushAction Basic Structure
+## 1. CodockAction Basic Structure
 
 Each action contain the following fields:
 
@@ -21,7 +21,7 @@ Each action contain the following fields:
 - `name` (required): Display name of the action
 - `description` (optional): Additional description information
 - `prompts` (required): Can be a string or function
-  - String: Text directly sent to crush terminal
+  - String: Text directly sent to codock terminal
   - Function: Returns the string to send, supports dynamic content generation
 
 ## 2. Example 1: Simple String Prompts
@@ -29,7 +29,7 @@ Each action contain the following fields:
 The simplest action uses a static string:
 
 ```lua
-require("crush").setup({
+require("codock").setup({
     actions = {
         {
             name = "Explain this code",
@@ -46,7 +46,7 @@ require("crush").setup({
 
 ## 3. Example 2: Function Prompts (Reference analyze_and_fix_diagnostics)
 
-When you need to dynamically generate content, use a function as `prompts`. Here's an example from `lua/crush/actions/analyze_and_fix_diagnostics.lua`:
+When you need to dynamically generate content, use a function as `prompts`. Here's an example from `lua/codock/actions/analyze_and_fix_diagnostics.lua`:
 
 ```lua
 {
@@ -86,13 +86,13 @@ When you need to dynamically generate content, use a function as `prompts`. Here
 
 After configuring actions:
 
-1. Use `:CrushActions` command to open the selector
+1. Use `:CodockActions` command to open the selector
 2. Select the desired action
-3. The action's prompts will be automatically sent to the crush terminal
+3. The action's prompts will be automatically sent to the codock terminal
 
 ## 5. Default Actions
 
-The plugin provides default actions (see `lua/crush/actions/default.lua`). Custom actions will be displayed together with default actions.
+The plugin provides default actions (see `lua/codock/actions/default.lua`). Custom actions will be displayed together with default actions.
 
 ## 6. Notes
 

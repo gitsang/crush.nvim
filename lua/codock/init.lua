@@ -54,9 +54,9 @@ local function get_visual_pos()
 	return result
 end
 
----Find crush terminal buffer
+---Find codock terminal buffer
 ---@return integer|nil bufnr
-local function find_crush_terminal()
+local function find_codock_terminal()
 	local bufs = vim.api.nvim_list_bufs()
 	for _, buf in ipairs(bufs) do
 		if vim.api.nvim_buf_is_valid(buf) then
@@ -70,10 +70,10 @@ local function find_crush_terminal()
 	return nil
 end
 
----Send text to crush terminal
+---Send text to codock terminal
 ---@param text string text to send
 local function send_to_terminal(text)
-	local buf = find_crush_terminal()
+	local buf = find_codock_terminal()
 	if not buf then
 		return false
 	end
@@ -94,7 +94,7 @@ local function send_to_terminal(text)
 	return false
 end
 
----Copy visual position to system clipboard and send to crush terminal
+---Copy visual position to system clipboard and send to codock terminal
 ---@param copy_to_clipboard? boolean whether to copy to system clipboard
 local function copy_visual_pos(copy_to_clipboard)
 	local current_file = get_current_file()
@@ -134,11 +134,11 @@ local function copy_visual_pos(copy_to_clipboard)
 	return current_file, visual_pos
 end
 
----Open crush terminal in vertical split
+---Open codock terminal in vertical split
 ---@param width integer terminal width
----@param crush_cmd string command to run
+---@param codock_cmd string command to run
 ---@param fixed_width boolean whether to fix window width
-local function open_crush_terminal(width, crush_cmd, fixed_width)
+local function open_codock_terminal(width, codock_cmd, fixed_width)
 	-- Create a vertical split
 	vim.cmd("vsplit")
 	local win = vim.api.nvim_get_current_win()
@@ -149,8 +149,8 @@ local function open_crush_terminal(width, crush_cmd, fixed_width)
 		vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
 	end
 
-	-- Open terminal and run crush command
-	vim.cmd("terminal " .. crush_cmd)
+	-- Open terminal and run codock command
+	vim.cmd("terminal " .. codock_cmd)
 
 	-- Set buffer options to hide from buffer tab
 	local buf = vim.api.nvim_get_current_buf()
@@ -163,7 +163,7 @@ local function open_crush_terminal(width, crush_cmd, fixed_width)
 	vim.keymap.set("t", "<C-k>", "<C-\\><C-n><C-w>k", term_opts)
 	vim.keymap.set("t", "<C-l>", "<C-\\><C-n><C-w>l", term_opts)
 
-	-- Set up autocmd to enter terminal mode when entering crush terminal window
+	-- Set up autocmd to enter terminal mode when entering codock terminal window
 	vim.api.nvim_create_autocmd("WinEnter", {
 		buffer = buf,
 		callback = function()
@@ -177,33 +177,33 @@ local function open_crush_terminal(width, crush_cmd, fixed_width)
 	vim.cmd("startinsert")
 end
 
----@class CrushAction
+---@class CodockAction
 ---@field name string
 ---@field description? string
 ---@field prompts string|fun():string
 
----@class CrushOptions
+---@class CodockOptions
 ---@field width? integer
----@field crush_cmd? string
+---@field codock_cmd? string
 ---@field fixed_width? boolean
 ---@field copy_to_clipboard? boolean
----@field actions? CrushAction[]
+---@field actions? CodockAction[]
 
----Handle CrushFilePos command
+---Handle CodockFilePos command
 ---@param copy_to_clipboard boolean whether to copy to clipboard
 ---@param width integer terminal width
----@param crush_cmd string command to run
+---@param codock_cmd string command to run
 ---@param fixed_width boolean whether to fix window width
-local function handle_crush_filepos(copy_to_clipboard, width, crush_cmd, fixed_width)
+local function handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed_width)
 	local current_file, visual_pos = copy_visual_pos(copy_to_clipboard)
 
-	-- Check if crush terminal exists
-	if find_crush_terminal() then
+	-- Check if codock terminal exists
+	if find_codock_terminal() then
 		-- Send to existing terminal: @file, enter, :pos
 		send_to_terminal(current_file .. ":" .. visual_pos .. " ")
 	else
-		-- Open crush terminal first, then send
-		open_crush_terminal(width, crush_cmd, fixed_width)
+		-- Open codock terminal first, then send
+		open_codock_terminal(width, codock_cmd, fixed_width)
 		-- Wait a bit for terminal to be ready, then send
 		vim.defer_fn(function()
 			send_to_terminal(current_file .. ":" .. visual_pos .. " ")
@@ -211,12 +211,12 @@ local function handle_crush_filepos(copy_to_clipboard, width, crush_cmd, fixed_w
 	end
 end
 
----Handle CrushActions command
----@param opts CrushOptions configuration options
+---Handle CodockActions command
+---@param opts CodockOptions configuration options
 ---@param width integer terminal width
----@param crush_cmd string command to run
+---@param codock_cmd string command to run
 ---@param fixed_width boolean whether to fix window width
-local function handle_crush_actions(opts, width, crush_cmd, fixed_width)
+local function handle_codock_actions(opts, width, codock_cmd, fixed_width)
 	if not opts.actions or #opts.actions == 0 then
 		vim.notify("No actions configured", vim.log.levels.WARN)
 		return
@@ -256,8 +256,8 @@ local function handle_crush_actions(opts, width, crush_cmd, fixed_width)
 		end
 
 		-- Ensure terminal exists
-		if not find_crush_terminal() then
-			open_crush_terminal(width, crush_cmd, fixed_width)
+		if not find_codock_terminal() then
+			open_codock_terminal(width, codock_cmd, fixed_width)
 			vim.defer_fn(function()
 				send_to_terminal(prompt)
 			end, 3000)
@@ -267,12 +267,12 @@ local function handle_crush_actions(opts, width, crush_cmd, fixed_width)
 	end)
 end
 
----Setup function for crush.nvim
----@param opts? CrushOptions
+---Setup function for codock.nvim
+---@param opts? CodockOptions
 function M.setup(opts)
 	opts = opts or {}
 	local width = opts.width or 80
-	local crush_cmd = opts.crush_cmd or "crush"
+	local codock_cmd = opts.codock_cmd or "codock"
 	local fixed_width = opts.fixed_width or false
 	local copy_to_clipboard = opts.copy_to_clipboard ~= false -- default to true
 
@@ -282,20 +282,20 @@ function M.setup(opts)
 	end
 
 	-- Load default actions and insert them at the beginning
-	local default_actions = require("crush.actions.default").get_default_actions()
+	local default_actions = require("codock.actions.default").get_default_actions()
 	for i = #default_actions, 1, -1 do
 		table.insert(opts.actions, 1, default_actions[i])
 	end
 
-	-- Create Crush command
-	vim.api.nvim_create_user_command("Crush", function()
-		open_crush_terminal(width, crush_cmd, fixed_width)
+	-- Create Codock command
+	vim.api.nvim_create_user_command("Codock", function()
+		open_codock_terminal(width, codock_cmd, fixed_width)
 	end, {})
-	vim.api.nvim_create_user_command("CrushActions", function()
-		handle_crush_actions(opts, width, crush_cmd, fixed_width)
+	vim.api.nvim_create_user_command("CodockActions", function()
+		handle_codock_actions(opts, width, codock_cmd, fixed_width)
 	end, { range = true })
-	vim.api.nvim_create_user_command("CrushFilePos", function()
-		handle_crush_filepos(copy_to_clipboard, width, crush_cmd, fixed_width)
+	vim.api.nvim_create_user_command("CodockFilePos", function()
+		handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed_width)
 	end, { range = true })
 
 	-- Add autocommand to maintain width on window resize (only if fixed_width is enabled)
@@ -314,7 +314,7 @@ function M.setup(opts)
 					if vim.api.nvim_win_is_valid(winid) then
 						local buf = vim.api.nvim_win_get_buf(winid)
 						if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-							-- Check if this is a crush terminal (not listed in buffer list)
+							-- Check if this is a codock terminal (not listed in buffer list)
 							if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
 								vim.api.nvim_win_set_width(winid, width)
 							end

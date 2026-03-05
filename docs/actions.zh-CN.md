@@ -2,9 +2,9 @@
 
 [English](./actions.md)
 
-本教程教你如何为 `crush.nvim` 配置自定义 actions。
+本教程教你如何为 `codock.nvim` 配置自定义 actions。
 
-## 1. CrushAction 基本结构
+## 1. CodockAction 基本结构
 
 每个 action 包含以下字段：
 
@@ -21,7 +21,7 @@
 - `name` (必需): action 的显示名称
 - `description` (可选): 附加说明信息
 - `prompts` (必需): 可以是字符串或函数
-  - 字符串: 直接发送到 crush 终端的文本
+  - 字符串: 直接发送到 codock 终端的文本
   - 函数: 返回要发送的字符串，支持动态生成内容
 
 ## 2. 示例 1: 简单字符串 Prompts
@@ -29,7 +29,7 @@
 最简单的 action 使用静态字符串：
 
 ```lua
-require("crush").setup({
+require("codock").setup({
     actions = {
         {
             name = "Explain this code",
@@ -46,7 +46,7 @@ require("crush").setup({
 
 ## 3. 示例 2: 函数式 Prompts（参考 analyze_and_fix_diagnostics）
 
-当需要动态生成内容时，使用函数作为 `prompts`。这是 `lua/crush/actions/analyze_and_fix_diagnostics.lua` 的示例：
+当需要动态生成内容时，使用函数作为 `prompts`。这是 `lua/codock/actions/analyze_and_fix_diagnostics.lua` 的示例：
 
 ```lua
 {
@@ -86,13 +86,13 @@ require("crush").setup({
 
 配置好 actions 后：
 
-1. 使用 `:CrushActions` 命令打开选择器
+1. 使用 `:CodockActions` 命令打开选择器
 2. 选择需要的 action
-3. action 的 prompts 会自动发送到 crush 终端
+3. action 的 prompts 会自动发送到 codock 终端
 
 ## 5. 默认 Actions
 
-插件提供了默认的 actions（参见 `lua/crush/actions/default.lua`）。自定义的 actions 会与默认 actions 一起显示。
+插件提供了默认的 actions（参见 `lua/codock/actions/default.lua`）。自定义的 actions 会与默认 actions 一起显示。
 
 ## 6. 注意事项
 

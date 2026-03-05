@@ -87,7 +87,7 @@ local function get_diagnostics_prompt()
 end
 
 ---Get analyze and fix diagnostics action
----@return CrushAction
+---@return CodockAction
 function M.get_action()
 	return {
 		name = "Analyze and fix diagnostics",

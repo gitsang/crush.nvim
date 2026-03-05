@@ -10,6 +10,3 @@ build/
 # IDE
 .vscode/
 .idea/
-
-# Crush
-.crush/
