@@ -1,8 +1,8 @@
 # codock.nvim
 
-[中文](./README.zh-CN.md)
+English | [中文](./README.zh-CN.md)
 
-A Neovim plugin that opens a terminal with AI CLI tools (crush, opencode, claude, gemini-cli, etc.) in a vertical split.
+A Neovim plugin that opens a terminal with Coding Agent CLI tools (crush, opencode, claude, gemini-cli, etc.) in a vertical split.
 
 ![Preview](./resources/Preview.gif)
 

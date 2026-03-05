@@ -1,8 +1,8 @@
 # codock.nvim
 
-[English](./README.md)
+[English](./README.md) | 中文
 
-一个 Neovim 插件，在垂直分割窗口中打开运行 AI CLI 工具（crush、opencode、claude、gemini-cli 等）的终端。
+一个 Neovim 插件，在垂直分割窗口中打开运行 Coding Agent CLI 工具（crush、opencode、claude、gemini-cli 等）的终端。
 
 ![Preview](./resources/Preview.gif)
 
@@ -57,4 +57,3 @@
 - `gemini-cli` - Gemini CLI
 
 只需将 `codock_cmd` 选项设置为你首选的 AI CLI 工具即可。
-
