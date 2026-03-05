@@ -37,6 +37,13 @@ After installation, you can run the following commands:
 
 Run the `:Codock` command to open a terminal in a vertical split running the configured AI CLI command.
 
+You can also specify a different CLI tool as an argument:
+
+- `:Codock` - Open the default CLI tool configured in `codock_cmd`
+- `:Codock claude` - Open claude
+- `:Codock opencode` - Open opencode
+- `:Codock gemini-cli` - Open gemini-cli
+
 ### 2.2 CodockFilePos Command
 
 The `:CodockFilePos` command copies the relative file path and line/column information to the clipboard in various visual modes, then send it to the AI CLI tool.

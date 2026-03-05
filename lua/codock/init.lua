@@ -287,10 +287,14 @@ function M.setup(opts)
 		table.insert(opts.actions, 1, default_actions[i])
 	end
 
-	-- Create Codock command
-	vim.api.nvim_create_user_command("Codock", function()
-		open_codock_terminal(width, codock_cmd, fixed_width)
-	end, {})
+	-- Create Codock command (supports optional argument: :Codock [cmd])
+	vim.api.nvim_create_user_command("Codock", function(cmd_opts)
+		local cmd = cmd_opts.args
+		if cmd == "" then
+			cmd = codock_cmd
+		end
+		open_codock_terminal(width, cmd, fixed_width)
+	end, { nargs = "?" })
 	vim.api.nvim_create_user_command("CodockActions", function()
 		handle_codock_actions(opts, width, codock_cmd, fixed_width)
 	end, { range = true })

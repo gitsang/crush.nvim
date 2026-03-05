@@ -37,6 +37,13 @@
 
 运行 `:Codock` 命令在垂直分割窗口中打开运行配置的 AI CLI 命令的终端。
 
+你也可以指定不同的 CLI 工具作为参数：
+
+- `:Codock` - 打开 `codock_cmd` 配置的默认 CLI 工具
+- `:Codock claude` - 打开 claude
+- `:Codock opencode` - 打开 opencode
+- `:Codock gemini-cli` - 打开 gemini-cli
+
 ### 2.2 CodockFilePos 命令
 
 `:CodockFilePos` 命令在 Visual 模式下将相对文件路径和行/列信息复制到剪贴板，然后发送给 AI CLI 工具。
