@@ -143,11 +143,11 @@ local function open_codock_terminal(width, codock_cmd, fixed_width)
 	vim.cmd("vsplit")
 	local win = vim.api.nvim_get_current_win()
 
-	-- Set window width and optionally fix it
+	-- Set window width
+	-- Always set winfixwidth to prevent automatic width adjustments (like ctrl+w =)
+	-- but allow manual width adjustments (like ctrl+w > / ctrl+w <)
 	vim.api.nvim_win_set_width(win, width)
-	if fixed_width then
-		vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
-	end
+	vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
 
 	-- Open terminal and run codock command
 	vim.cmd("terminal " .. codock_cmd)
