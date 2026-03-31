@@ -61,8 +61,7 @@ local function find_codock_terminal()
 	for _, buf in ipairs(bufs) do
 		if vim.api.nvim_buf_is_valid(buf) then
 			local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
-			local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf })
-			if buftype == "terminal" and not buflisted then
+			if buftype == "terminal" and vim.b[buf].codock_terminal then
 				return buf
 			end
 		end
@@ -138,7 +137,7 @@ end
 ---@param width integer terminal width
 ---@param codock_cmd string command to run
 ---@param fixed_width boolean whether to fix window width
-local function open_codock_terminal(width, codock_cmd, fixed_width)
+local function open_codock_terminal(width, codock_cmd, fixed_width, augroup)
 	-- Create a vertical split
 	vim.cmd("vsplit")
 	local win = vim.api.nvim_get_current_win()
@@ -148,6 +147,7 @@ local function open_codock_terminal(width, codock_cmd, fixed_width)
 	-- but allow manual width adjustments (like ctrl+w > / ctrl+w <)
 	vim.api.nvim_win_set_width(win, width)
 	vim.api.nvim_set_option_value("winfixwidth", true, { win = win })
+	vim.w[win].codock_terminal = true
 
 	-- Open terminal and run codock command
 	vim.cmd("terminal " .. codock_cmd)
@@ -155,6 +155,7 @@ local function open_codock_terminal(width, codock_cmd, fixed_width)
 	-- Set buffer options to hide from buffer tab
 	local buf = vim.api.nvim_get_current_buf()
 	vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+	vim.b[buf].codock_terminal = true
 
 	-- Set up terminal key mappings for window navigation
 	local term_opts = { buffer = buf, silent = true }
@@ -165,6 +166,7 @@ local function open_codock_terminal(width, codock_cmd, fixed_width)
 
 	-- Set up autocmd to enter terminal mode when entering codock terminal window
 	vim.api.nvim_create_autocmd("WinEnter", {
+		group = augroup,
 		buffer = buf,
 		callback = function()
 			if vim.api.nvim_get_current_win() == win then
@@ -194,7 +196,7 @@ end
 ---@param width integer terminal width
 ---@param codock_cmd string command to run
 ---@param fixed_width boolean whether to fix window width
-local function handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed_width)
+local function handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed_width, augroup)
 	local current_file, visual_pos = copy_visual_pos(copy_to_clipboard)
 
 	-- Check if codock terminal exists
@@ -203,7 +205,7 @@ local function handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed
 		send_to_terminal(current_file .. ":" .. visual_pos .. " ")
 	else
 		-- Open codock terminal first, then send
-		open_codock_terminal(width, codock_cmd, fixed_width)
+		open_codock_terminal(width, codock_cmd, fixed_width, augroup)
 		-- Wait a bit for terminal to be ready, then send
 		vim.defer_fn(function()
 			send_to_terminal(current_file .. ":" .. visual_pos .. " ")
@@ -216,7 +218,7 @@ end
 ---@param width integer terminal width
 ---@param codock_cmd string command to run
 ---@param fixed_width boolean whether to fix window width
-local function handle_codock_actions(opts, width, codock_cmd, fixed_width)
+local function handle_codock_actions(opts, width, codock_cmd, fixed_width, augroup)
 	if not opts.actions or #opts.actions == 0 then
 		vim.notify("No actions configured", vim.log.levels.WARN)
 		return
@@ -257,7 +259,7 @@ local function handle_codock_actions(opts, width, codock_cmd, fixed_width)
 
 		-- Ensure terminal exists
 		if not find_codock_terminal() then
-			open_codock_terminal(width, codock_cmd, fixed_width)
+			open_codock_terminal(width, codock_cmd, fixed_width, augroup)
 			vim.defer_fn(function()
 				send_to_terminal(prompt)
 			end, 3000)
@@ -275,6 +277,7 @@ function M.setup(opts)
 	local codock_cmd = opts.codock_cmd or "codock"
 	local fixed_width = opts.fixed_width or false
 	local copy_to_clipboard = opts.copy_to_clipboard ~= false -- default to true
+	local augroup = vim.api.nvim_create_augroup("codock_nvim", { clear = true })
 
 	-- Initialize actions array if not provided
 	if not opts.actions then
@@ -293,18 +296,19 @@ function M.setup(opts)
 		if cmd == "" then
 			cmd = codock_cmd
 		end
-		open_codock_terminal(width, cmd, fixed_width)
+		open_codock_terminal(width, cmd, fixed_width, augroup)
 	end, { nargs = "?" })
 	vim.api.nvim_create_user_command("CodockActions", function()
-		handle_codock_actions(opts, width, codock_cmd, fixed_width)
+		handle_codock_actions(opts, width, codock_cmd, fixed_width, augroup)
 	end, { range = true })
 	vim.api.nvim_create_user_command("CodockFilePos", function()
-		handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed_width)
+		handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed_width, augroup)
 	end, { range = true })
 
 	-- Add autocommand to maintain width on window resize (only if fixed_width is enabled)
 	if fixed_width then
 		vim.api.nvim_create_autocmd({ "VimResized", "WinResized" }, {
+			group = augroup,
 			callback = function()
 				-- Get all windows
 				local wins = vim.api.nvim_list_wins()
@@ -316,10 +320,8 @@ function M.setup(opts)
 
 				for _, winid in ipairs(wins) do
 					if vim.api.nvim_win_is_valid(winid) then
-						local buf = vim.api.nvim_win_get_buf(winid)
-						if vim.api.nvim_buf_is_valid(buf) and vim.bo[buf].buftype == "terminal" then
-							-- Check if this is a codock terminal (not listed in buffer list)
-							if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
+						if vim.w[winid].codock_terminal then
+							if vim.api.nvim_win_get_width(winid) ~= width then
 								vim.api.nvim_win_set_width(winid, width)
 							end
 						end
