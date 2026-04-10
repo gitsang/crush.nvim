@@ -1,4 +1,5 @@
 local M = {}
+local utils = require("codock.utils")
 
 ---Get visual position string from current buffer and selection
 ---@return string position_string
@@ -46,66 +47,10 @@ local function get_visual_pos()
 	return result
 end
 
----Find codock terminal buffer
----@return integer|nil bufnr
-local function find_codock_terminal()
-	local bufs = vim.api.nvim_list_bufs()
-	for _, buf in ipairs(bufs) do
-		if vim.api.nvim_buf_is_valid(buf) then
-			local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
-			if buftype == "terminal" and vim.b[buf].codock_terminal then
-				return buf
-			end
-		end
-	end
-	return nil
-end
-
----Get the working directory of the codock terminal process
----@return string|nil cwd or nil if unavailable
-local function get_terminal_cwd()
-	local term_buf = find_codock_terminal()
-	if not term_buf then
-		return nil
-	end
-	local pid = vim.b[term_buf].terminal_job_pid
-	if not pid then
-		return nil
-	end
-	-- On Linux, resolve /proc/<pid>/cwd symlink
-	local proc_cwd = "/proc/" .. tostring(pid) .. "/cwd"
-	local ok, result = pcall(vim.fn.resolve, proc_cwd)
-	if ok and result and result ~= "" and result ~= proc_cwd then
-		return result
-	end
-	return nil
-end
-
----Get current file path relative to terminal cwd (falls back to Neovim cwd)
----@return string file_path
-local function get_current_file()
-	local buf = vim.api.nvim_get_current_buf()
-	local abs_path = vim.api.nvim_buf_get_name(buf)
-	if abs_path == "" then
-		return ""
-	end
-
-	local term_cwd = get_terminal_cwd()
-	if term_cwd then
-		local prefix = term_cwd:sub(-1) == "/" and term_cwd or (term_cwd .. "/")
-		if abs_path:sub(1, #prefix) == prefix then
-			return abs_path:sub(#prefix + 1)
-		end
-		return abs_path
-	end
-
-	return vim.fn.fnamemodify(abs_path, ":.")
-end
-
 ---Send text to codock terminal
 ---@param text string text to send
 local function send_to_terminal(text)
-	local buf = find_codock_terminal()
+	local buf = utils.find_codock_terminal()
 	if not buf then
 		return false
 	end
@@ -129,7 +74,7 @@ end
 ---Copy visual position to system clipboard and send to codock terminal
 ---@param copy_to_clipboard? boolean whether to copy to system clipboard
 local function copy_visual_pos(copy_to_clipboard)
-	local current_file = get_current_file()
+	local current_file = utils.get_current_file()
 	local visual_pos = get_visual_pos()
 	local result = current_file .. ":" .. visual_pos
 
@@ -233,7 +178,7 @@ local function handle_codock_filepos(copy_to_clipboard, width, codock_cmd, fixed
 	local current_file, visual_pos = copy_visual_pos(copy_to_clipboard)
 
 	-- Check if codock terminal exists
-	if find_codock_terminal() then
+	if utils.find_codock_terminal() then
 		-- Send to existing terminal: @file, enter, :pos
 		send_to_terminal(current_file .. ":" .. visual_pos .. " ")
 	else
@@ -291,7 +236,7 @@ local function handle_codock_actions(opts, width, codock_cmd, fixed_width, augro
 		end
 
 		-- Ensure terminal exists
-		if not find_codock_terminal() then
+		if not utils.find_codock_terminal() then
 			open_codock_terminal(width, codock_cmd, fixed_width, augroup)
 			vim.defer_fn(function()
 				send_to_terminal(prompt)

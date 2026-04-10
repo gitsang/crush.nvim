@@ -1,12 +1,5 @@
 local M = {}
-
----Get current file path (relative)
----@return string file_path
-local function get_current_file()
-	local buf = vim.api.nvim_get_current_buf()
-	local file_path = vim.api.nvim_buf_get_name(buf)
-	return vim.fn.fnamemodify(file_path, ":.")
-end
+local utils = require("codock.utils")
 
 ---Get visual selection range
 ---@return integer start_line, integer end_line
@@ -42,7 +35,7 @@ end
 ---Get diagnostics in visual range and format them
 ---@return string prompt
 local function get_diagnostics_prompt()
-	local current_file = get_current_file()
+	local current_file = utils.get_current_file()
 	local start_line, end_line = get_visual_range()
 	local buf = vim.api.nvim_get_current_buf()
 
